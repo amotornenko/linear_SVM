@@ -185,7 +185,7 @@ class LinearSVM():
 
 
     #we calculate how many times each x contributes to loss
-    n_entries = np.zeros(self.W.shape)
+    n_entries = np.zeros(margins.shape)
     n_entries[margins > 0] = 1
 
     # for each margin > 0 "correct" weight contributes "-1" time 
