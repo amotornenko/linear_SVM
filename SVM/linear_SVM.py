@@ -123,18 +123,22 @@ class LinearSVM():
         if j == y[i]:
           continue
         margin = scores[j] - correct_class_score + 1
+
         if margin > 0:
           loss += margin
-          # compute dW
-          dW.T[j] += x[i]
-          dW.T[y[i]] -= x[i]
 
-    # Right now the loss is a sum over all training examples, but we want it
-    # to be an average instead so we divide by num_train.
+          # compute dW
+          # loss = max(0, x*w_j - x*w_y + 1)
+          # hence derivative is
+          dW[:,j] += x[i]
+          dW[:,y[i]] -= x[i]
+
+    # Average loss by the number of samples in the mini-batch
+    # i.e. divide by the number of samples, the same goes for dW 
     loss /= n_samples
     dW /= n_samples
 
-    # Add regularization to the loss.
+    # Take regularization into account
     loss += reg * np.sum(self.W * self.W)
     dW += 2 * reg * self.W
 
@@ -164,28 +168,36 @@ class LinearSVM():
     dW = np.zeros(self.W.shape) # initialize the gradient as zero
 
     scores = x.dot(self.W)
+    
+    correct_lbl_indices = (np.arange(n_samples), y)
+    correct_scores = scores[correct_lbl_indices]
 
-    margins = np.maximum(0, scores - scores[np.arange(n_samples), y].reshape(n_samples, 1) + 1)
-    margins[np.arange(n_samples), y] = 0
+    margins = np.maximum(0, scores - correct_scores.reshape(n_samples, 1) + 1)
+    margins[correct_lbl_indices] = 0
     loss += np.sum(margins)
 
-    # Right now the loss is a sum over all training examples, but we want it
-    # to be an average instead so we divide by num_train.
+    # Average loss by the number of samples in the mini-batch
+    # i.e. divide by the number of samples, the same goes for dW 
     loss /= n_samples
 
     # Add regularization to the loss.
     loss += reg * np.sum(self.W * self.W)
 
-    binary = margins
-    binary[margins > 0] = 1
-    row_sum = np.sum(binary, axis=1)
-    binary[np.arange(n_samples), y] = -row_sum.T
-    dW = np.dot(x.T, binary)
 
-    # Average
+    #we calculate how many times each x contributes to loss
+    n_entries = np.zeros(self.W.shape)
+    n_entries[margins > 0] = 1
+
+    # for each margin > 0 "correct" weight contributes "-1" time 
+    row_sum = np.sum(n_entries, axis=1)
+    n_entries[correct_lbl_indices] = -row_sum.T
+
+    dW = np.dot(x.T, n_entries)
+
+    # Average the gradient
     dW /= n_samples
 
-    # Regularize
+    # Take regularization into account
     dW += 2 * reg * self.W
 
     return loss, dW
