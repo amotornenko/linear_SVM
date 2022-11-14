@@ -6,7 +6,7 @@ class LinearSVM():
     self.W = W
 
   def train(self, x, y, validate=False, x_val=None, y_val=None, learning_rate=1e-3, reg=1e-5, n_epochs=100,
-            batch_size=200, log_period=-1, use_numpy=False):
+            batch_size=200, log_period=-1, use_numpy=False, reg_type=2):
     """
     
 
@@ -40,7 +40,7 @@ class LinearSVM():
       y_batch = y[idxs]
 
       # calculate loss and gradient simultaneously
-      loss, grad = self.loss(x_batch, y_batch, reg, use_numpy=use_numpy)
+      loss, grad = self.loss(x_batch, y_batch, reg, use_numpy=use_numpy, reg_type=reg_type)
       loss_history.append(loss)
 
       # perform parameter update
@@ -66,13 +66,11 @@ class LinearSVM():
     - y_pred: (np.array) predicted labels for the data in x; y_pred is a vector of size (N), each element 
     corresponds to a prediction.
     """
-    y_pred = np.zeros(x.shape[0])
-
     scores = x.dot(self.W)
     y_pred = np.argmax(scores, axis=-1)
     return y_pred
 
-  def loss(self, x_batch, y_batch, reg, use_numpy = False):
+  def loss(self, x_batch, y_batch, reg, reg_type, use_numpy = False):
     """
     Computes the loss function and its grtadient.
 
@@ -88,11 +86,11 @@ class LinearSVM():
     - gradient with respect to self.W; an array of the same shape as W
     """
     if use_numpy:
-      return self.svm_loss_numpy(x_batch, y_batch, reg)
+      return self.svm_loss_numpy(x_batch, y_batch, reg, reg_type)
     else:
-      return self.svm_loss_naive(x_batch, y_batch, reg)
+      return self.svm_loss_naive(x_batch, y_batch, reg, reg_type)
 
-  def svm_loss_naive(self, x, y, reg):
+  def svm_loss_naive(self, x, y, reg, reg_type):
     """
     SVM Hinge loss function, naive implementation (with for loops).
 
@@ -139,13 +137,17 @@ class LinearSVM():
     dW /= n_samples
 
     # Take regularization into account
-    loss += reg * np.sum(self.W * self.W)
-    dW += 2 * reg * self.W
+    if reg_type == 2:
+      loss += reg * np.sum(self.W * self.W)
+      dW += 2 * reg * self.W
+    else:
+      loss += reg * np.sum(np.abs(self.W))
+      dW += reg * np.sign(self.W)
 
     return loss, dW
 
 
-  def svm_loss_numpy(self, x, y, reg):
+  def svm_loss_numpy(self, x, y, reg, reg_type):
     """
     SVM Hinge loss function, using numpy arrays.
     Provides a speed-up because of the numpy array vectorisation. 
@@ -180,10 +182,6 @@ class LinearSVM():
     # i.e. divide by the number of samples, the same goes for dW 
     loss /= n_samples
 
-    # Add regularization to the loss.
-    loss += reg * np.sum(self.W * self.W)
-
-
     #we calculate how many times each x contributes to loss
     n_entries = np.zeros(margins.shape)
     n_entries[margins > 0] = 1
@@ -198,6 +196,11 @@ class LinearSVM():
     dW /= n_samples
 
     # Take regularization into account
-    dW += 2 * reg * self.W
+    if reg_type == 2:
+      loss += reg * np.sum(self.W * self.W)
+      dW += 2 * reg * self.W
+    else:
+      loss += reg * np.sum(np.abs(self.W))
+      dW += reg * np.sign(self.W)
 
     return loss, dW
