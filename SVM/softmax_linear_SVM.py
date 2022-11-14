@@ -65,18 +65,6 @@ class SoftMaxLinearSVM(LinearSVM):
 
     dW = x.T.dot(gradient)
 
-    # naive loss
-    # for i in range(n_samples):
-    #   scores = x[i].dot(self.W)
-
-    #   p = np.exp(scores)
-    #   p = p/np.sum(p)
-
-    #   gradient = p.reshape(1,-1)
-    #   gradient[0, y[i]] += -1
-
-    #   dW += x[i].reshape(-1,1).dot(gradient)
-
     dW /= n_samples
 
     loss += reg * np.sum(self.W * self.W)
